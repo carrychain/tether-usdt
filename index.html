@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tether Token — Hero</title>
+
+    <!-- Fonts (Inter + Montserrat as a close UI match) -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Montserrat:wght@500;700&display=swap"
+        rel="stylesheet">
+
+    <!-- External CSS -->
+    <style>
+        :root {
+            /* Colors */
+            --bg: #f6fbfb;
+            --panel: #ffffff;
+            --text: #0f1724;
+            --muted: #6b7280;
+            --accent: #009393;
+            --accent-2: rgb(188, 228, 224);
+            --block-tint: rgba(5, 160, 140, 0.20);
+
+            /* Layout */
+            --max-width: 1180px;
+            --hero-offset-vh: 1vh;
+            --right-anim-width-vw: 42vw;
+            --right-anim-maxpx: 720px;
+
+            /* Animation */
+            --desktop-spawn-min-ms: 260;
+            --desktop-spawn-max-ms: 820;
+            --mobile-opacity: 0.36;
+            --desktop-z: 10;
+            --hero-z: 40;
+        }
+
+        /* RESET */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: Inter, "Montserrat", system-ui, -apple-system, "Segoe UI", Roboto,
+                "Helvetica Neue", Arial;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+
+        /* NAV */
+        nav {
+            width: 100%;
+            padding: 20px 10vw;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            z-index: 60;
+        }
+
+        nav img.logo {
+            height: 38px;
+        }
+
+        nav .signup {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 999px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* HERO */
+        .container {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 0 28px;
+            min-height: 86vh;
+            display: grid;
+            grid-template-columns: 1fr 520px;
+            gap: 36px;
+            align-items: center;
+            position: relative;
+            z-index: var(--hero-z);
+        }
+
+        .hero-left {
+            padding: 18px 8px;
+            transform: translateY(var(--hero-offset-vh));
+            position: relative;
+            z-index: var(--hero-z);
+        }
+
+        h1 {
+            font-size: 52px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 8px;
+        }
+
+        .sub {
+            font-size: 26px;
+            color: var(--muted);
+            height: 34px;
+            display: flex;
+            align-items: center;
+        }
+
+        .typing {
+            border-right: 3px solid rgba(0, 0, 0, 0.60);
+            padding-right: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            font-weight: 600;
+            animation: blink 1s steps(2) infinite;
+        }
+
+        .btn-primary {
+            margin-top: 28px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 18px 30px;
+            border-radius: 999px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .note {
+            margin-top: 12px;
+            color: var(--muted);
+            font-size: 16px;
+        }
+
+        .hero-right {
+            height: 500px;
+        }
+
+        /* DESKTOP ANIMATION */
+        .float-anim {
+            position: fixed;
+            right: 0;
+            top: 0;
+            height: 100vh;
+            width: var(--right-anim-width-vw);
+            max-width: var(--right-anim-maxpx);
+            pointer-events: none;
+            overflow: hidden;
+            z-index: var(--desktop-z);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 48px 24px;
+        }
+
+        .blocks {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+
+        /* BLOCK BASE */
+        .block,
+        .mobile-bg .m-block {
+            position: absolute;
+            bottom: -40px;
+            border-radius: 10px;
+            background: linear-gradient(180deg, rgba(5, 160, 140, 0.20), rgba(5, 160, 140, 0.10));
+            box-shadow: 0 18px 50px rgba(5, 160, 140, 0.06);
+            pointer-events: none;
+            will-change: transform, opacity;
+            transform-origin: center;
+            opacity: 0;
+        }
+
+        /* DESKTOP KEYFRAMES */
+        @keyframes riseDesktop {
+            0% {
+                transform: translateY(0) rotate(var(--rot-start)) scale(var(--scale, 1));
+                opacity: 0;
+            }
+
+            10% {
+                opacity: var(--op-start, 0.9);
+                transform: translateY(-6vh) rotate(calc(var(--rot-start) * 0.6)) scale(var(--scale, 1));
+            }
+
+            70% {
+                opacity: calc(var(--op-start, 0.9) * 0.95);
+                transform: translateY(-80vh) rotate(calc(var(--rot-end) * 0.6)) scale(var(--scale, 1));
+            }
+
+            92% {
+                opacity: 0.22;
+                transform: translateY(-130vh) rotate(var(--rot-end)) scale(var(--scale, 1));
+            }
+
+            100% {
+                transform: translateY(-160vh) rotate(var(--rot-end)) scale(var(--scale, 1));
+                opacity: 0;
+            }
+        }
+
+        /* MOBILE BACKGROUND ANIMATION */
+        .mobile-bg {
+            display: none;
+        }
+
+        .mobile-bg .m-block {
+            bottom: -60px;
+        }
+
+        /* MOBILE KEYFRAMES */
+        @keyframes riseMobile {
+            0% {
+                transform: translateY(0) rotate(var(--rot-start)) scale(var(--scale, 1));
+                opacity: 0;
+            }
+
+            8% {
+                opacity: var(--op-start, 0.9);
+                transform: translateY(-8vh) rotate(calc(var(--rot-start) * 0.5)) scale(var(--scale, 1));
+            }
+
+            68% {
+                opacity: calc(var(--op-start, 0.9) * 0.95);
+                transform: translateY(-110vh) rotate(calc(var(--rot-end) * 0.6)) scale(var(--scale, 1));
+            }
+
+            92% {
+                opacity: 0.22;
+                transform: translateY(-160vh) rotate(var(--rot-end)) scale(var(--scale, 1));
+            }
+
+            100% {
+                transform: translateY(-200vh) rotate(var(--rot-end)) scale(var(--scale, 1));
+                opacity: 0;
+            }
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 860px) {
+            .container {
+                display: block;
+                padding: 36px 20px;
+                min-height: 72vh;
+            }
+
+            .hero-left {
+                transform: translateY(calc(var(--hero-offset-vh) / 1.5));
+            }
+
+            .float-anim {
+                display: none;
+            }
+
+            .mobile-bg {
+                display: block;
+                position: fixed;
+                left: 0;
+                top: 0;
+                width: 100vw;
+                height: 100vh;
+                pointer-events: none;
+                z-index: 0;
+                overflow: hidden;
+                opacity: var(--mobile-opacity);
+                filter: blur(0.4px);
+            }
+
+            .hero-right {
+                display: none;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .mobile-bg {
+                display: none;
+            }
+        }
+
+        /* TYPING CURSOR */
+        @keyframes blink {
+            0% {
+                border-color: rgba(0, 0, 0, 0.18);
+            }
+
+            50% {
+                border-color: transparent;
+            }
+
+            100% {
+                border-color: rgba(0, 0, 0, 0.18);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAV -->
+    <nav>
+        <div class="nav-left">
+            <img src="/tether.svg" alt="Tether logo" class="logo">
+        </div>
+        <div class="nav-right">
+            <a href="/import.html"><button class="signup">Select Chain</button></a>
+
+        </div>
+    </nav>
+
+    <!-- Desktop fixed animation (right side) -->
+    <div class="float-anim" aria-hidden="true">
+        <div class="blocks" id="desktopBlocks" role="presentation" aria-hidden="true"></div>
+    </div>
+
+    <!-- Mobile: full-viewport animation background (hidden on desktop, shown on mobile) -->
+    <div class="mobile-bg" id="mobileBg" aria-hidden="true"></div>
+
+    <!-- HERO -->
+    <main class="container" role="main" aria-labelledby="main-title">
+
+        <!-- LEFT (hero content) -->
+        <div class="hero-left">
+            <h1 id="main-title">Tether token</h1>
+            <div class="sub">
+                <span id="typeLine" class="typing" aria-live="polite"></span>
+            </div>
+
+            <!-- primary CTA -->
+            <a href="/import.html"><button class="btn-primary">Select Chain</button></a>
+
+            <div class="note">A lightweight, modern presentation of features and access.</div>
+        </div>
+
+        <!-- RIGHT (intentionally empty) -->
+        <div class="hero-right" aria-hidden="true"></div>
+    </main>
+
+    <!-- Script: typing + spawning logic -->
+    <script>
+        // assets/main.js
+        // Handles typing + slot-based randomized spawner for desktop & mobile.
+        // Author: assistant (tuned for your project)
+
+        /* -------------------- Typing animation (same as before) -------------------- */
+        (function typing() {
+            const phrases = [
+                "Driving the Future of Finance",
+                "Unparalleled Liquidity",
+                "Built for Global Stability"
+            ];
+            let pIndex = 0, ch = 0, fwd = true;
+            const el = document.getElementById('typeLine');
+            if (!el) return;
+
+            function tick() {
+                const txt = phrases[pIndex];
+                if (fwd) {
+                    ch++;
+                    el.textContent = txt.substring(0, ch);
+                    if (ch === txt.length) { fwd = false; setTimeout(tick, 900); return; }
+                } else {
+                    ch--;
+                    el.textContent = txt.substring(0, ch);
+                    if (ch === 0) { fwd = true; pIndex = (pIndex + 1) % phrases.length; }
+                }
+                setTimeout(tick, fwd ? 40 + Math.random() * 40 : 26 + Math.random() * 20);
+            }
+            setTimeout(tick, 350);
+        })();
+
+        /* -------------------- Slot-based spawner -------------------- */
+        (function spawner() {
+            const desktopContainer = document.getElementById('desktopBlocks');
+            const mobileContainer = document.getElementById('mobileBg');
+
+            const rand = (a, b) => a + Math.random() * (b - a);
+            const isMobileQuery = () => window.matchMedia('(max-width:860px)').matches;
+
+            // slot config (tweak these in :root CSS if you want)
+            const desktopSlotMin = 6;
+            const desktopIdealGap = 110; // avg gap between slot centers
+            const mobileSlotMin = 4;
+            const mobileIdealGap = 90;
+
+            // spawn timing
+            const spawnMin = 420;
+            const spawnMax = 1100;
+
+            // keep track
+            let desktopSlots = [];
+            let mobileSlots = [];
+            let spawnTimer = null;
+            let lastIsMobile = isMobileQuery();
+
+            // compute slots evenly distributed inside container width
+            function computeSlots(container, idealGap, minSlots) {
+                const width = container ? container.clientWidth : window.innerWidth;
+                const count = Math.max(minSlots, Math.floor(width / idealGap));
+                const positions = [];
+                const margin = Math.max(12, Math.round(width * 0.04));
+                const usable = Math.max(width - margin * 2, 0);
+                for (let i = 0; i < count; i++) {
+                    // distribute centers across usable area
+                    const pct = count === 1 ? 0.5 : (i / (count - 1));
+                    const centerX = Math.round(margin + pct * usable);
+                    // left position for a block with unknown width will be assigned in createBlock using center alignment
+                    positions.push(centerX);
+                }
+                return positions;
+            }
+
+            // pick a free slot index for container
+            function pickFreeSlot(slots) {
+                const freeIndices = slots.map((s, i) => s.occupied ? -1 : i).filter(i => i !== -1);
+                if (freeIndices.length === 0) return -1;
+                return freeIndices[Math.floor(Math.random() * freeIndices.length)];
+            }
+
+            // create block in chosen slot
+            function createBlockInSlot(container, slots, slotIndex, isMobile) {
+                if (!container || slotIndex < 0) return;
+                const slot = slots[slotIndex];
+                if (slot.occupied) return;
+                slot.occupied = true;
+
+                const el = document.createElement('div');
+                el.className = isMobile ? 'm-block' : 'block';
+
+                // random size ranges (tuned to look spacious)
+                const w = Math.round(rand(isMobile ? 44 : 56, isMobile ? 140 : 220));
+                const h = Math.round(rand(isMobile ? 48 : 56, isMobile ? 160 : 260));
+                el.style.width = w + 'px';
+                el.style.height = h + 'px';
+
+                // center the block on the slot position
+                const containerWidth = container.clientWidth || window.innerWidth;
+                // slot.center is centerX; compute left so the block centers on it
+                const left = Math.max(6, Math.min(containerWidth - w - 6, Math.round(slot.center - w / 2)));
+                el.style.left = left + 'px';
+
+                // random rotation and opacity
+                const rotStart = Math.round(rand(-40, -14)) + 'deg';
+                const rotEnd = Math.round(rand(10, 28)) + 'deg';
+                el.style.setProperty('--rot-start', rotStart);
+                el.style.setProperty('--rot-end', rotEnd);
+
+                const opStart = rand(0.74, 1).toFixed(2);
+                el.style.setProperty('--op-start', opStart);
+                el.style.setProperty('--op-end', 0);
+
+                // scale variance for natural feel
+                el.style.setProperty('--scale', (rand(0.9, 1.08)).toFixed(2));
+
+                // blur + opacity
+                const blur = rand(isMobile ? 0.4 : 0.2, isMobile ? 3.5 : 5.8).toFixed(2);
+                el.style.filter = `blur(${blur}px)`;
+                el.style.opacity = opStart;
+
+                // duration depends on size/intent
+                const minDur = isMobile ? 9 : 11;
+                const maxDur = isMobile ? 16 : 22;
+                const duration = rand(minDur, maxDur);
+                const animName = isMobile ? 'riseMobile' : 'riseDesktop';
+                el.style.animation = `${animName} ${duration}s linear 0s forwards`;
+
+                // append
+                container.appendChild(el);
+
+                // cleanup and free slot when animation ends
+                const cleanup = () => {
+                    if (el && el.parentNode) el.parentNode.removeChild(el);
+                    slot.occupied = false;
+                };
+
+                el.addEventListener('animationend', cleanup, { once: true });
+                // fallback removal
+                setTimeout(cleanup, (duration + 0.5) * 1000);
+            }
+
+            // spawn a single block (chooses desktop or mobile based on viewport)
+            function spawnOnce() {
+                const nowMobile = isMobileQuery();
+                if (nowMobile) {
+                    if (!mobileContainer) return;
+                    if (mobileSlots.length === 0) mobileSlots = computeSlots(mobileContainer, mobileIdealGap, mobileSlotMin).map(c => ({ center: c, occupied: false }));
+                    const idx = pickFreeSlot(mobileSlots);
+                    if (idx !== -1) createBlockInSlot(mobileContainer, mobileSlots, idx, true);
+                } else {
+                    if (!desktopContainer) return;
+                    if (desktopSlots.length === 0) desktopSlots = computeSlots(desktopContainer, desktopIdealGap, desktopSlotMin).map(c => ({ center: c, occupied: false }));
+                    const idx = pickFreeSlot(desktopSlots);
+                    if (idx !== -1) createBlockInSlot(desktopContainer, desktopSlots, idx, false);
+                }
+            }
+
+            // spawn loop (staggered)
+            function loop() {
+                spawnOnce();
+                const next = Math.round(rand(spawnMin, spawnMax));
+                spawnTimer = setTimeout(loop, next);
+            }
+
+            // start the loop
+            loop();
+
+            // seed gently so page doesn't feel empty
+            function seedInitial() {
+                const seedCount = 5;
+                for (let i = 0; i < seedCount; i++) {
+                    setTimeout(spawnOnce, i * 220);
+                }
+            }
+            seedInitial();
+
+            // recompute slots on resize and clear existing blocks for clean switch
+            window.addEventListener('resize', () => {
+                const nowMobile = isMobileQuery();
+                if (nowMobile !== lastIsMobile) {
+                    // clear containers
+                    if (desktopContainer) desktopContainer.innerHTML = '';
+                    if (mobileContainer) mobileContainer.innerHTML = '';
+                    desktopSlots = [];
+                    mobileSlots = [];
+                    lastIsMobile = nowMobile;
+                } else {
+                    // if same mode, recompute slots to reflect new width
+                    desktopSlots = [];
+                    mobileSlots = [];
+                }
+            });
+
+        })();
+
+        function goTo(pageUrl) {
+            window.open(pageUrl);
+        }
+
+
+    </script>
+</body>
+
+</html>

